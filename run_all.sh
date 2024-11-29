@@ -3,6 +3,8 @@
 # Define the base folder path
 BASE_FOLDER="/home/e74237/BSc/Data"
 
+SAMPLE_START=EH
+
 if [[ $1 == "report" ]]; then
 
 # Python scripts to use for different types of data, eg. VSM, theta2theta, etc.
@@ -45,7 +47,7 @@ SECONDARY_SCRIPTS=("overlay_graph_2thetachi.py" "overlay_graph_2theta.py" "overl
 for folder in "$BASE_FOLDER"/*/; do
   #get the sample name
   search_folder_name=$(basename "$folder")
-  if [[ "$search_folder_name" == EH* ]]; then
+  if [[ "$search_folder_name" == $SAMPLE_START* ]]; then
     search_sample=$search_folder_name
     echo "Running Sample $search_folder_name"
 
