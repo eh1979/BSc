@@ -11,11 +11,11 @@ sample_name/ -> VSM/ -> Data/ -> your_data.VHD
                      -> XRR/ -> Data/ -> your_data.txt
 ```
 
-Can then use the run.sh file by changing BASE_FOLDER filepath to the file path that your data folders are in. Then after chmod to turn into .exe, run as 
+Can then use the ```run.sh``` file by changing ```BASE_FOLDER``` filepath to the file path that your data folders are in. Then after chmod to turn into .exe, run as 
 ```
 ./run.sh sample_name
 ```
-Or for run_all.sh, define BASE_FOLDER as before and change EH in line 48 ```(  if [[ "$search_folder_name" == EH* ]]; then  )``` to the beginning of sample name, where sample_folders should be labelled in a similar format to EH01, EH01_350, EH02, etc... with a consistent sample start. Run with:
+Or for ```run_all.sh```, define ```BASE_FOLDER``` as before and change the ```SAMPLE_START``` variable from EH in line 6 to the beginning of chosen sample name, where sample_folders should be labelled in a similar format to EH01, EH01_350, EH02, etc... with a consistent sample start. Run with:
 ```
 ./run_all.sh
 ```
