@@ -190,14 +190,33 @@ plt.figure(figsize=(8, 6))
 color_list = ['blue', 'purple', 'magenta']  # Define colors for each dataset
 
 for i, data in enumerate(overlay_data):
+
+    # Determine marker based on the file name
+    if "Initial" in data['filename']:
+        marker = 'o-'  # Circular for samples before annealing
+        if "Annealing" in data['filename']:
+            name = 'Initial Annealed 0C'
+        else:
+            name = f'Initial Annealed {data['filename'].split('_')[-1].replace(".VHD", "")}'
+        #Changes the name to reflect annealing temperature.
+    elif "100C" in data['filename']:
+        marker = '^-'  # Triangular for thermally activated samples
+        if "Annealing" in data['filename']:
+            name = '100C Annealed 0C'
+        else:
+            name = f'100C Annealed {data['filename'].split('_')[-1].replace(".VHD", "")}'
+    else:
+        marker = 's-'  # Square for who knows what errors
+        
     # Use a specified color or random color for each dataset's plot
     color = color_list[i] if i < len(color_list) else (random.random(), random.random(), random.random())
 
-    # Shorten filename by removing the ".VHD" extension and using only the last part after '-'
-    label_name = data['filename'].split('-')[-1].replace(".VHD", "")
+     # Shorten filename by removing the ".VHD" extension and using only the last part after '-'
+    label_name = name
+    #label_name = data['filename'].split('-')[-1].replace(".VHD", "")
 
-    # Plot data with blobs (markers) and lines connecting them, using the assigned color
-    plt.plot(data['H'], data['m'], 'o-', markersize=5, label=label_name, color=color)
+    # # Plot data with marker assigned in section above, using the colour from the color thing earlier.
+    plt.plot(data['H'], data['m'], marker, markersize=5, label=label_name, color=color)
 
     # Retrieve Hc and Hex for each dataset
     Hc = blocking.loc[i, 'Hc']
@@ -205,16 +224,21 @@ for i, data in enumerate(overlay_data):
 
     # Plot Hc and Hex lines with the same color as the dataset's plot
     if pd.notna(Hc):
-        plt.axvline(x=Hc, color=color, linestyle='--',alpha=0, label=f'{label_name} Hc = {Hc} Oe')
+        plt.axvline(x=Hc, color=color, linestyle='--',alpha=0)
+#, label=f'{label_name} Hc = {Hc} Oe'
+
     if pd.notna(Hex):
-        plt.axvline(x=Hex, color=color, linestyle='--', label=f'{label_name} Hex = {Hex} Oe')
+        plt.axvline(x=Hex, color=color, linestyle='--')
+#label=f'{label_name} Hex = {Hex} Oe'
+
 
 # Set axis labels and title
 plt.xlabel("H (Oe)")
 plt.ylabel("M/M$_{S}$")
 plt.title("Overlay of Hysteresis Loops")
 
-plt.xlim(overlay_zoom_min, overlay_zoom_max)
+# Changes to the size of the hysteresis loops by zooming in around centre of loops. Size multiplied to allow room for legend.
+plt.xlim(overlay_zoom_min*1.2, overlay_zoom_max*1.2)
 
 # Bold the central axes for the overlay graph with lighter emphasis
 plt.axhline(0, color='black', linewidth=1.5)  # Slightly bolder central x-axis
@@ -223,8 +247,8 @@ plt.axvline(0, color='black', linewidth=1.5)  # Slightly bolder central y-axis
 # Add a grid to the overlay plot
 plt.grid(True)
 
-# Show the legend with smaller font size to reduce overlap
-plt.legend(fontsize='small', loc='best', ncol=1)
+# Show the legend with smaller font size to reduce overlap, location in the upper left, if needed for file can change to loc='best' or for slightly larger text loc='small'
+plt.legend(fontsize=8, loc='upper left', ncol=1)
 
 # Save the overlay plot
 overlay_filename = "overlay_hysteresis_loops.png"
