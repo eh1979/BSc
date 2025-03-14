@@ -187,7 +187,7 @@ overlay_zoom_max = overlay_Hc_right + zoom_value*Hc
 # Overlay graph - Plot all the hysteresis loops on top of each other
 
 plt.figure(figsize=(8, 6))
-color_list = ['blue', 'purple', 'magenta']  # Define colors for each dataset
+color_list = ['blue', 'purple', 'magenta' 'red', 'orange', 'yellow']  # Define colors for each dataset
 
 for i, data in enumerate(overlay_data):
 
