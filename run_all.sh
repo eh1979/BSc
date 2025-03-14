@@ -16,7 +16,7 @@ if [[ $1 == "report" ]]; then
 
     REPORT_NAME=$2
     REPORT_FOLDER_NAME=Report_$REPORT_NAME
-    mkdir -p REPORT_FOLDER_NAME
+    mkdir -p $REPORT_FOLDER_NAME
     echo "Folder Report_$REPORT_NAME created"
 
     REPORT_FOLDER_DIR="$BASE_FOLDER/$REPORT_FOLDER_NAME"
