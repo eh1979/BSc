@@ -207,8 +207,13 @@ print(f"Table of Gaussian parameters saved as {csv_filename}")
 # --- Save Background Subtracted Original Data ---
 background_subtracted_filename = f"Sample_{sample_name}_background_subtracted_data.csv"
 original_intensity_corrected = intensity - fitted_background
+
+
+
 background_subtracted_filepath = os.path.join(report_dir, "theta2theta/Tables", background_subtracted_filename)
-pd.DataFrame({'theta': theta, 'intensity': original_intensity_corrected}).to_csv(background_subtracted_filepath, index=False)
+pd.DataFrame({'theta': theta, 'intensity': original_intensity_corrected}) \
+    .loc[(theta >= 35) & (theta <= 65)] \
+    .to_csv(background_subtracted_filepath, index=False)
 print(f"Background subtracted data saved as {background_subtracted_filename}")
 
 ##########  Graph Plotting #############
