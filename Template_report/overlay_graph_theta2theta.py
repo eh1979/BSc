@@ -31,12 +31,13 @@ MnN_peaks = {
     'MnN 222': 79.08,
 }
 
-# Create bulk_peaks dictionary and add both to it.  If I change material later can just add a new set of peaks and then add it to the bulk peaks without having to change the code further down.
+# Create bulk_peaks dictionary and add both to it.
 bulk_peaks = {}
 bulk_peaks.update(silver_peaks)
 bulk_peaks.update(MnN_peaks)
 
 # Now the bulk_peaks dictionary contains data from both
+
 
 ##### Access Bash Script File Path: #####
 directory = sys.argv[1]  # The first argument - Data folder
@@ -45,7 +46,7 @@ table_dir = sys.argv[3] # Third - Values folder
 sample_name = sys.argv[4] # Fourth - sample name
 report_dir = sys.argv[5] # Fifth - Reports folder directory
 
-tab_filepath= os.path.join(report_dir, "2theta/Tables") # Defines a table filepath within the report directory
+tab_filepath = os.path.join(report_dir, "theta2theta/Tables") # Defines a table filepath within the report directory
 
 #######   Function Initialisation  ######
 
@@ -60,6 +61,10 @@ def extract_data_from_file(file_path):
     data = data.apply(pd.to_numeric, errors='coerce')
     data.dropna(inplace=True)
 
+    if data.empty:
+        print(f"Warning: No valid numeric data found in {file_path}")
+        return np.array([]), np.array([])
+
     theta = data['theta'].values
     original_intensity_corrected = data['intensity'].values
 
@@ -67,121 +72,155 @@ def extract_data_from_file(file_path):
 
 ################# Plot 1 ###########################
 
-##########  Graph Plotting #############
 
+## Overlay Plot of theta2theta data, with two subplots, to simplify python have cut out using brokenaxes for this and am instead simply plotting within the range 35-65.
 
+# Define subplots
+fig, axes = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
 
-##### ColourMap #####
-
-#cmap = cm.get_cmap('Set1')  # chosen colormap
-cmap = mcolors.ListedColormap(["lime","darkgreen","blue","darkblue","fuchsia","indigo"])
-colours = [cmap(i) for i in range(cmap.N)]  # Extract all colours from the colormap
-
-# Create a colour iterator to cycle through
+# Set colormap
+cmap = mcolors.ListedColormap(["blue", "fuchsia", "indigo", "seagreen", "mediumblue", "indigo", "dodgerblue", "lime", "orange", "red"])
+colours = [cmap(i) for i in range(cmap.N)]  # Extract colours from colormap
 colour_cycle = iter(colours)
 
-##### Plot Graph: #####
-
-# Plot the data with brokenaxis
-fig = plt.figure(figsize=(12, 6))
-#brk = brokenaxes(xlims=((theta.min(), peak_2_min), (peak_2_max, peak_1_min), (peak_1_max, theta.max())), wspace=0.05)
-
-# Set log y-axis scale
-#for ax in brk.axs:
-    #ax.set_yscale('log')
-
-# Initialise brokenaxes with appropriate x-axis breaks
-brk = brokenaxes( xlims=((30, 32), (33, 65.5), (79.5, 85)), wspace=0.05 )
-
+# Separate files into two categories
+EH01_files = []
+EH02_files = []
 
 for filename in os.listdir(tab_filepath):
     if filename.endswith("background_subtracted_data.csv"):
-        file_path = os.path.join(tab_filepath, filename)
+        if 'EH01' in filename:
+            EH01_files.append(filename)
+        elif 'EH02' in filename:
+            EH02_files.append(filename)
 
+
+
+
+def plot_group(ax, file_list, title):
+    colour_cycle = iter(colours)
+    for filename in file_list:
+        file_path = os.path.join(tab_filepath, filename)
         Colour = next(colour_cycle)
 
-        #Select just the sample name from the filename
         sample_name_label = re.search(r"Sample_(.*)_background", filename)
-        label_from_file=sample_name_label.group(1) # Group 1 is the (.*) section
+        label_from_file = sample_name_label.group(1) if sample_name_label else filename
 
-
-         # call function which returns theta and original_intensity_corrected
         theta, original_intensity_corrected = extract_data_from_file(file_path)
 
+        ax.plot(theta, original_intensity_corrected, label=label_from_file, color=Colour, lw=1)
 
-        ##### Identify and Remove Si Peaks ####
+        print(file_path)
 
-        # Identify the silicon peak at 69 degrees
-        silicon_peak_index_1 = np.argmax(original_intensity_corrected)
-        silicon_peak_theta_1 = theta[silicon_peak_index_1]
-        silicon_peak_intensity = original_intensity_corrected[silicon_peak_index_1]
+    ax.set_ylabel('Intensity (Counts)')
+    ax.set_title(title)
+    ax.legend()
+    ax.grid(True)
 
-        # For the second peak, define the theta range for the search
-        theta_min, theta_max = 30, 35
-        in_range = (theta >= theta_min) & (theta <= theta_max)
+plot_group(axes[0], EH01_files, "EH01")
+plot_group(axes[1], EH02_files, "EH02")
 
-        # Identify the silicon peak at 33 degrees
-        silicon_peak_index_2 = np.argmax(original_intensity_corrected[in_range])
-        silicon_peak_theta_2 = theta[silicon_peak_index_2]
-        silicon_peak_intensity = original_intensity_corrected[silicon_peak_index_2]
+axes[1].set_xlabel('2θ (Degrees)')
 
-        # Set the location and ranges of the peaks for masking and for the graph break.
-        peak_1_min = 65.5
-        peak_1_max = 79.5
+for ax in axes:
+    for label, theta in bulk_peaks.items():
+        ax.axvline(x=theta, linestyle='-', color='black', linewidth=1.5, zorder=2)
+        ymin, ymax = ax.get_ylim()
+        label_position = ymax * 1.015
+        ax.text(theta, label_position, label, color='black', rotation=90,
+                verticalalignment='bottom', horizontalalignment='center', fontsize=7)
 
-        peak_2_range = 0.2
-        peak_2_min = silicon_peak_theta_2 - peak_2_range
-        peak_2_max = silicon_peak_theta_2 + peak_2_range
+# Adjust layout
+plt.tight_layout()
+plt.xlim(35, 65)
 
-        # Remove the silicon peak by setting values to NaN in a small range around the peak.  This allows for the plot to dynamically adjust the scaling of the y axis so the data is as large as possible.
-        mask_1 = (theta >= peak_1_min) & (theta <= peak_1_max)
-        original_intensity_corrected[mask_1] = np.nan
+# ##### Plot Graph: #####
+# fig, axs = plt.subplots(figsize=(12, 6))  # Define fig and axs
+# fig.subplots_adjust(hspace=0.4)  # Adjust spacing between subplots
+#
+# # Initialise brokenaxes with appropriate x-axis breaks
+# brk = brokenaxes(xlims=((30, 32), (33, 65.5), (79.5, 85)), wspace=0.05)
+#
+# for filename in os.listdir(tab_filepath):
+#     if filename.endswith("background_subtracted_data.csv"):
+#         file_path = os.path.join(tab_filepath, filename)
+#
+#         Colour = next(colour_cycle)
+#
+#         # Select just the sample name from the filename
+#         sample_name_label = re.search(r"Sample_(.*)_background", filename)
+#         label_from_file = sample_name_label.group(1) # Group 1 is the (.*) section
+#
+#         # Call function which returns theta and original_intensity_corrected
+#         theta, original_intensity_corrected = extract_data_from_file(file_path)
+#
+#         ##### Identify and Remove Si Peaks ####
+#
+#         # Identify the silicon peak at 69 degrees
+#         silicon_peak_index_1 = np.argmax(original_intensity_corrected)
+#         silicon_peak_theta_1 = theta[silicon_peak_index_1]
+#         silicon_peak_intensity = original_intensity_corrected[silicon_peak_index_1]
+#
+#         # For the second peak, define the theta range for the search
+#         theta_min, theta_max = 30, 35
+#         in_range = (theta >= theta_min) & (theta <= theta_max)
+#
+#         # Identify the silicon peak at 33 degrees
+#         silicon_peak_index_2 = np.argmax(original_intensity_corrected[in_range])
+#         silicon_peak_theta_2 = theta[silicon_peak_index_2]
+#         silicon_peak_intensity = original_intensity_corrected[silicon_peak_index_2]
+#
+#         # Set the location and ranges of the peaks for masking and for the graph break.
+#         peak_1_min = 65.5
+#         peak_1_max = 79.5
+#
+#         peak_2_range = 0.2
+#         peak_2_min = silicon_peak_theta_2 - peak_2_range
+#         peak_2_max = silicon_peak_theta_2 + peak_2_range
+#
+#         # Remove the silicon peak by setting values to NaN in a small range around the peak.
+#         mask_1 = (theta >= peak_1_min) & (theta <= peak_1_max)
+#         original_intensity_corrected[mask_1] = np.nan
+#
+#         mask_2 = (theta >= peak_2_min) & (theta <= peak_2_max)
+#         original_intensity_corrected[mask_2] = np.nan
+#
+#         # Plot the background-subtracted original unbinned intensity after background subtraction
+#         brk.plot(theta, original_intensity_corrected, label=label_from_file, color=Colour, lw=1)
+#
+# # Plot the bulk peak lines
+# for label, theta in bulk_peaks.items():
+#     # Plot the bulk line
+#     brk.axvline(x=theta, linestyle='-', color='black', linewidth=1.5, zorder=2)
+#
+#     # Determine which subplot the peak belongs to
+#     for ax in brk.axs:
+#         xlim = ax.get_xlim()
+#         if xlim[0] <= theta <= xlim[1]:
+#             # Get the current y-axis limits for the subplot
+#             ymin, ymax = ax.get_ylim()
+#             label_position = ymax * 1.05  # Adjust label position as needed
+#
+#             # Add the label within the corresponding subplot
+#             ax.text(
+#                 theta, label_position, label, color='black', rotation=90,
+#                 verticalalignment='bottom', horizontalalignment='center', fontsize=7
+#             )
+#             break  # Label placed, no need to check other subplots
+#
+# # Plot lines where the original theta peaks were.
+# brk.axvline(32.95, color='r', linestyle='', label=f'Silicon Peak at 32.95°')
+# brk.axvline(69.13, color='r', linestyle='', label=f'Silicon Peak at 69.13°')
+#
+# # Set parameters for Graph
+# brk.set_xlabel('2θ (Degrees)')
+# brk.set_ylabel('Intensity (Counts)')
+# brk.legend()
+# brk.grid(True)
 
-        mask_2 = (theta >= peak_2_min) & (theta <= peak_2_max)
-        original_intensity_corrected[mask_2] = np.nan
-
-        #brk = brokenaxes(xlims=((theta.min(), peak_2_min), (peak_2_max, peak_1_min), (peak_1_max, theta.max())), wspace=0.05)
-
-        # Corrected original unbinned intensity after background subtraction
-        brk.plot(theta, original_intensity_corrected, label=label_from_file, color=Colour, lw=1)
-
-
-#Plot the bulk peak lines
-for label, theta in bulk_peaks.items():
-    # Plot the bulk line
-    brk.axvline(x=theta, linestyle='-', color='black', linewidth=1.5, zorder=2)
-
-    # Determine which subplot the peak belongs to
-    for ax in brk.axs:
-        xlim = ax.get_xlim()
-        if xlim[0] <= theta <= xlim[1]:
-            # Get the current y-axis limits for the subplot
-            ymin, ymax = ax.get_ylim()
-            label_position = ymax * 1.05  # Adjust label position as needed
-
-            # Add the label within the corresponding subplot
-            ax.text(
-                theta, label_position, label, color='black', rotation=90,
-                verticalalignment='bottom', horizontalalignment='center', fontsize=7
-            )
-            break  # Label placed, no need to check other subplots
-
-
-# Plot lines where the original theta peaks were.
-brk.axvline(32.95, color='r', linestyle='', label=f'Silicon Peak at 32.95°')
-brk.axvline(69.13, color='r', linestyle='', label=f'Silicon Peak at 69.13°')
-
-
-# Set parameters for Graph
-brk.set_xlabel('2θ (Degrees)')
-brk.set_ylabel('Intensity (Counts)')
-#brk.set_title('θ-2θ Plot with Silicon Peak Removed')
-brk.legend()
-brk.grid(True)
-
-
-# Save the plot of background-subtracted original unbinned data with Gaussians
+# Save the plot of background-subtracted original unbinned data
 fin_filename = 'theta2theta_overlay.png'
 fin_filepath = os.path.join(report_dir, "theta2theta/Graphs", fin_filename)
 plt.savefig(fin_filepath)
 print("Plot of overlay theta2theta data saved as 'theta2theta_overlay.png'")
+
